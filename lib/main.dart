@@ -12,420 +12,337 @@ class QuranApp extends StatelessWidget {
     return MaterialApp(
       title: 'القرآن الكريم',
       theme: ThemeData(
-        primarySwatch: Colors.green,
-        fontFamily: 'Amiri', // You can add Arabic font
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: 18, fontFamily: 'Amiri'),
-          bodyMedium: TextStyle(fontSize: 16, fontFamily: 'Amiri'),
-          headlineMedium: TextStyle(
-              fontSize: 22, fontFamily: 'Amiri', fontWeight: FontWeight.bold),
-        ),
+        primarySwatch: Colors.brown,
+        fontFamily: 'HafsSmart_08',
       ),
-      home: SurahListScreen(),
+      home: SurahMenuScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class Surah {
-  final int id;
-  final String name;
-  final String transliteration;
-  final String type;
-  final int totalVerses;
-  final List<Verse> verses;
-
-  Surah({
-    required this.id,
-    required this.name,
-    required this.transliteration,
-    required this.type,
-    required this.totalVerses,
-    required this.verses,
-  });
-
-  factory Surah.fromJson(Map<String, dynamic> json) {
-    return Surah(
-      id: json['id'],
-      name: json['name'],
-      transliteration: json['transliteration'],
-      type: json['type'],
-      totalVerses: json['total_verses'],
-      verses: (json['verses'] as List)
-          .map((verse) => Verse.fromJson(verse))
-          .toList(),
-    );
-  }
-}
-
-class Verse {
-  final int id;
-  final String text;
-
-  Verse({required this.id, required this.text});
-
-  factory Verse.fromJson(Map<String, dynamic> json) {
-    return Verse(
-      id: json['id'],
-      text: json['text'],
-    );
-  }
-}
-
-class SurahListScreen extends StatefulWidget {
+class SurahMenuScreen extends StatefulWidget {
   @override
-  _SurahListScreenState createState() => _SurahListScreenState();
+  _SurahMenuScreenState createState() => _SurahMenuScreenState();
 }
 
-class _SurahListScreenState extends State<SurahListScreen> {
-  List<Surah> surahs = [];
+class _SurahMenuScreenState extends State<SurahMenuScreen> {
+  Map<String, List<String>> quranData = {};
+  Map<String, dynamic> tafsirData = {};
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    loadQuranData();
+    loadData();
   }
 
-  Future<void> loadQuranData() async {
+  Future<void> loadData() async {
     try {
-      final String jsonString =
+      final String quranJsonString =
           await rootBundle.loadString('lib/data/quran.json');
-      final List<dynamic> jsonData = json.decode(jsonString);
+      final Map<String, dynamic> quranJsonData = json.decode(quranJsonString);
+
+      final String tafsirJsonString = await rootBundle
+          .loadString('lib/data/tafsir/ar-tafsir-ibn-kathir.json');
+      final Map<String, dynamic> tafsirJsonData = json.decode(tafsirJsonString);
+
       setState(() {
-        surahs =
-            jsonData.map((surahJson) => Surah.fromJson(surahJson)).toList();
+        quranData = quranJsonData
+            .map((key, value) => MapEntry(key, List<String>.from(value)));
+        tafsirData = tafsirJsonData;
         isLoading = false;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
       });
-      print('Error loading Quran data: $e');
     }
-  }
-
-  String getTypeInArabic(String type) {
-    return type == 'meccan' ? 'مكية' : 'مدنية';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFFDF6E3),
       appBar: AppBar(
         title: Text(
           'القرآن الكريم',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            fontFamily: 'HafsSmart_08',
           ),
         ),
-        backgroundColor: Colors.green[700],
+        backgroundColor: Colors.brown[800],
         centerTitle: true,
-        elevation: 4,
+        elevation: 0,
       ),
       body: isLoading
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                  ),
-                  SizedBox(height: 16),
-                  Text('جاري تحميل القرآن الكريم...'),
-                ],
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.brown[600]!),
               ),
             )
-          : surahs.isEmpty
-              ? Center(
-                  child: Text(
-                    'لا يمكن تحميل البيانات',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.green[50]!,
-                        Colors.white,
-                      ],
-                    ),
-                  ),
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(8),
-                    itemCount: surahs.length,
-                    itemBuilder: (context, index) {
-                      final surah = surahs[index];
-                      return Card(
-                        margin:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: Container(
-                            width: 45,
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: Colors.green[700],
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${surah.id}',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
+          : ListView.builder(
+              itemCount: quranData.keys.length,
+              itemBuilder: (context, index) {
+                String surahName = quranData.keys.elementAt(index);
+                return Card(
+                  color: Colors.white,
+                  elevation: 2,
+                  margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  child: ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SurahReadScreen(
+                            surahName: surahName,
+                            ayas: quranData[surahName]!,
+                            surahIndex: index + 1,
+                            tafsirData: tafsirData,
                           ),
-                          title: Text(
-                            surah.name,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[800],
-                            ),
-                            textDirection: TextDirection.rtl,
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                surah.transliteration,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[100],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      getTypeInArabic(surah.type),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.green[800],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '${surah.totalVerses} آية',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          trailing: Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.green[700],
-                            size: 16,
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    VersesScreen(surah: surah),
-                              ),
-                            );
-                          },
                         ),
                       );
                     },
+                    title: Text(
+                      surahName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown[800],
+                        fontFamily: 'HafsSmart_08',
+                      ),
+                      textDirection: TextDirection.rtl,
+                    ),
                   ),
-                ),
+                );
+              },
+            ),
     );
   }
 }
 
-class VersesScreen extends StatelessWidget {
-  final Surah surah;
+class SurahReadScreen extends StatefulWidget {
+  final String surahName;
+  final List<String> ayas;
+  final int surahIndex;
+  final Map<String, dynamic> tafsirData;
 
-  VersesScreen({required this.surah});
+  SurahReadScreen({
+    required this.surahName,
+    required this.ayas,
+    required this.surahIndex,
+    required this.tafsirData,
+  });
 
-  String getTypeInArabic(String type) {
-    return type == 'meccan' ? 'مكية' : 'مدنية';
+  @override
+  _SurahReadScreenState createState() => _SurahReadScreenState();
+}
+
+class _SurahReadScreenState extends State<SurahReadScreen> {
+  int? selectedAyaIndex;
+  int? longPressedAyaIndex;
+
+  void _onAyaLongPress(int ayaIndex) {
+    String tafsirKey = "${widget.surahIndex}:${ayaIndex + 1}";
+    if (widget.tafsirData.containsKey(tafsirKey)) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        longPressedAyaIndex = ayaIndex;
+      });
+
+      Future.delayed(Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            longPressedAyaIndex = null;
+          });
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TafsirScreen(
+                surahName: widget.surahName,
+                ayaIndex: ayaIndex + 1,
+                tafsirText: widget.tafsirData[tafsirKey]['text'],
+                ayaText: widget.ayas[ayaIndex],
+              ),
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String fullText = widget.ayas.join(' ');
+
+    return Scaffold(
+      backgroundColor: Color(0xFFFDF6E3),
+      appBar: AppBar(
+        title: Text(
+          widget.surahName,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'HafsSmart_08',
+          ),
+        ),
+        backgroundColor: Colors.brown[800],
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: RichText(
+          textAlign: TextAlign.justify,
+          textDirection: TextDirection.rtl,
+          text: TextSpan(
+            children: widget.ayas.asMap().entries.map((entry) {
+              int index = entry.key;
+              String aya = entry.value;
+              bool isLongPressed = longPressedAyaIndex == index;
+
+              return WidgetSpan(
+                child: GestureDetector(
+                  onLongPress: () => _onAyaLongPress(index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isLongPressed
+                          ? Colors.brown[200]
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      aya + " ",
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.black87,
+                        fontFamily: 'HafsSmart_08',
+                        height: 1.8,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TafsirScreen extends StatelessWidget {
+  final String surahName;
+  final int ayaIndex;
+  final String tafsirText;
+  final String ayaText;
+
+  TafsirScreen({
+    required this.surahName,
+    required this.ayaIndex,
+    required this.tafsirText,
+    required this.ayaText,
+  });
+
+  String cleanTafsirText(String text) {
+    return text
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll(RegExp(r'\[\[.*?\]\]'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFFDF6E3),
       appBar: AppBar(
         title: Text(
-          surah.name,
+          'تفسير الآية $ayaIndex من $surahName',
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            fontFamily: 'HafsSmart_08',
           ),
         ),
-        backgroundColor: Colors.green[700],
+        backgroundColor: Colors.brown[800],
         centerTitle: true,
-        elevation: 4,
-        iconTheme: IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.green[50]!,
-              Colors.white,
-            ],
-          ),
-        ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Surah header
             Container(
-              width: double.infinity,
-              margin: EdgeInsets.all(16),
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                color: Colors.brown[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.brown[200]!),
               ),
               child: Column(
                 children: [
                   Text(
-                    surah.name,
+                    'الآية $ayaIndex',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[800],
+                      color: Colors.brown[800],
+                      fontFamily: 'HafsSmart_08',
                     ),
-                    textDirection: TextDirection.rtl,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 12),
                   Text(
-                    surah.transliteration,
+                    ayaText,
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
+                      fontSize: 22,
+                      color: Colors.black87,
+                      fontFamily: 'HafsSmart_08',
+                      height: 1.8,
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green[100],
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          getTypeInArabic(surah.type),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.green[800],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      Text(
-                        '${surah.totalVerses} آية',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
                   ),
                 ],
               ),
             ),
-            // Verses list
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                itemCount: surah.verses.length,
-                itemBuilder: (context, index) {
-                  final verse = surah.verses[index];
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12),
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black87,
-                          blurRadius: 4,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
+            SizedBox(height: 20),
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    cleanTafsirText(tafsirText),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.black87,
+                      height: 1.6,
+                      fontFamily: 'HafsSmart_08',
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          verse.text,
-                          style: TextStyle(
-                            fontSize: 24,
-                            height: 2.0,
-                            color: Colors.black87,
-                          ),
-                          textDirection: TextDirection.rtl,
-                          textAlign: TextAlign.right,
-                        ),
-                        SizedBox(height: 12),
-                        Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${verse.id}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.green[700],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                    textAlign: TextAlign.justify,
+                    textDirection: TextDirection.rtl,
+                  ),
+                ],
               ),
             ),
           ],
