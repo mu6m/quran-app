@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
@@ -13,7 +14,7 @@ class QuranApp extends StatelessWidget {
       title: 'القرآن الكريم',
       theme: ThemeData(
         primarySwatch: Colors.brown,
-        fontFamily: 'HafsSmart_08',
+        scaffoldBackgroundColor: Color(0xFFFDF6E3),
       ),
       home: SurahMenuScreen(),
       debugShowCheckedModeBanner: false,
@@ -27,43 +28,39 @@ class SurahMenuScreen extends StatefulWidget {
 }
 
 class _SurahMenuScreenState extends State<SurahMenuScreen> {
-  Map<String, List<String>> quranData = {};
-  Map<String, dynamic> tafsirData = {};
+  List<Map<String, dynamic>> surahs = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    loadSurahs();
   }
 
-  Future<void> loadData() async {
+  Future<void> loadSurahs() async {
     try {
       final String quranJsonString =
           await rootBundle.loadString('lib/data/quran.json');
-      final Map<String, dynamic> quranJsonData = json.decode(quranJsonString);
+      final List<dynamic> quranData = json.decode(quranJsonString);
 
-      final String tafsirJsonString = await rootBundle
-          .loadString('lib/data/tafsir/ar-tafsir-ibn-kathir.json');
-      final Map<String, dynamic> tafsirJsonData = json.decode(tafsirJsonString);
-
-      setState(() {
-        quranData = quranJsonData
-            .map((key, value) => MapEntry(key, List<String>.from(value)));
-        tafsirData = tafsirJsonData;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          surahs = List<Map<String, dynamic>>.from(quranData);
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFDF6E3),
       appBar: AppBar(
         title: Text(
           'القرآن الكريم',
@@ -71,7 +68,6 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontFamily: 'HafsSmart_08',
           ),
         ),
         backgroundColor: Colors.brown[800],
@@ -85,9 +81,9 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
               ),
             )
           : ListView.builder(
-              itemCount: quranData.keys.length,
+              itemCount: surahs.length,
               itemBuilder: (context, index) {
-                String surahName = quranData.keys.elementAt(index);
+                final surah = surahs[index];
                 return Card(
                   color: Colors.white,
                   elevation: 2,
@@ -98,21 +94,25 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => SurahReadScreen(
-                            surahName: surahName,
-                            ayas: quranData[surahName]!,
-                            surahIndex: index + 1,
-                            tafsirData: tafsirData,
+                            surah: surah,
                           ),
                         ),
                       );
                     },
                     title: Text(
-                      surahName,
+                      surah['name']['ar'],
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.brown[800],
-                        fontFamily: 'HafsSmart_08',
+                      ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                    subtitle: Text(
+                      '${surah['verses_count']} آية',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.brown[600],
                       ),
                       textDirection: TextDirection.rtl,
                     ),
@@ -125,125 +125,182 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
 }
 
 class SurahReadScreen extends StatefulWidget {
-  final String surahName;
-  final List<String> ayas;
-  final int surahIndex;
-  final Map<String, dynamic> tafsirData;
+  final Map<String, dynamic> surah;
 
-  SurahReadScreen({
-    required this.surahName,
-    required this.ayas,
-    required this.surahIndex,
-    required this.tafsirData,
-  });
+  SurahReadScreen({required this.surah});
 
   @override
   _SurahReadScreenState createState() => _SurahReadScreenState();
 }
 
 class _SurahReadScreenState extends State<SurahReadScreen> {
+  Map<String, dynamic> tafsirData = {};
+  bool isLoading = true;
   int? selectedAyaIndex;
-  int? longPressedAyaIndex;
+  Offset? buttonPosition;
 
-  void _onAyaLongPress(int ayaIndex) {
-    String tafsirKey = "${widget.surahIndex}:${ayaIndex + 1}";
-    if (widget.tafsirData.containsKey(tafsirKey)) {
+  @override
+  void initState() {
+    super.initState();
+    loadTafsirData();
+  }
+
+  Future<void> loadTafsirData() async {
+    try {
+      final String tafsirJsonString = await rootBundle
+          .loadString('lib/data/tafsir/ar-tafsir-ibn-kathir.json');
+      final Map<String, dynamic> allTafsirData = json.decode(tafsirJsonString);
+
+      if (mounted) {
+        setState(() {
+          tafsirData = allTafsirData;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _onAyaLongPress(int ayaNumber, LongPressStartDetails details) {
+    String tafsirKey = "${widget.surah['number']}:$ayaNumber";
+    if (tafsirData.containsKey(tafsirKey)) {
       HapticFeedback.mediumImpact();
+      final RenderBox overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
       setState(() {
-        longPressedAyaIndex = ayaIndex;
-      });
-
-      Future.delayed(Duration(milliseconds: 100), () {
-        if (mounted) {
-          setState(() {
-            longPressedAyaIndex = null;
-          });
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TafsirScreen(
-                surahName: widget.surahName,
-                ayaIndex: ayaIndex + 1,
-                tafsirText: widget.tafsirData[tafsirKey]['text'],
-                ayaText: widget.ayas[ayaIndex],
-              ),
-            ),
-          );
-        }
+        selectedAyaIndex = ayaNumber;
+        buttonPosition = overlay.globalToLocal(details.globalPosition);
       });
     }
   }
 
+  void _hideButton() {
+    if (selectedAyaIndex != null) {
+      setState(() {
+        selectedAyaIndex = null;
+        buttonPosition = null;
+      });
+    }
+  }
+
+  void _navigateToTafsir() {
+    if (selectedAyaIndex == null) return;
+
+    final int ayaNumber = selectedAyaIndex!;
+    String tafsirKey = "${widget.surah['number']}:$ayaNumber";
+
+    final verse = widget.surah['verses'].firstWhere(
+      (v) => v['number'] == ayaNumber,
+    );
+
+    _hideButton();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TafsirScreen(
+          surahName: widget.surah['name']['ar'],
+          ayaNumber: ayaNumber,
+          tafsirText: tafsirData[tafsirKey]['text'],
+          ayaText: verse['text']['ar'],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    String fullText = widget.ayas.join(' ');
-
     return Scaffold(
-      backgroundColor: Color(0xFFFDF6E3),
       appBar: AppBar(
         title: Text(
-          widget.surahName,
+          widget.surah['name']['ar'],
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontFamily: 'HafsSmart_08',
           ),
         ),
         backgroundColor: Colors.brown[800],
         centerTitle: true,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: RichText(
-          textAlign: TextAlign.justify,
-          textDirection: TextDirection.rtl,
-          text: TextSpan(
-            children: widget.ayas.asMap().entries.map((entry) {
-              int index = entry.key;
-              String aya = entry.value;
-              bool isLongPressed = longPressedAyaIndex == index;
+      body: isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.brown[600]!),
+              ),
+            )
+          : GestureDetector(
+              onTap: _hideButton,
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: RichText(
+                      textAlign: TextAlign.justify,
+                      textDirection: TextDirection.rtl,
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.black87,
+                          height: 1.8,
+                          fontFamily: 'Amiri',
+                        ),
+                        children: widget.surah['verses'].map<TextSpan>((verse) {
+                          final ayaNumber = verse['number'];
+                          final ayaText = verse['text']['ar'];
+                          final isSelected = selectedAyaIndex == ayaNumber;
 
-              return WidgetSpan(
-                child: GestureDetector(
-                  onLongPress: () => _onAyaLongPress(index),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isLongPressed
-                          ? Colors.brown[200]
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      aya + " ",
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.black87,
-                        fontFamily: 'HafsSmart_08',
-                        height: 1.8,
+                          return TextSpan(
+                            text: '$ayaText ﴿$ayaNumber﴾ ',
+                            style: TextStyle(
+                              color: isSelected ? Colors.brown : Colors.black87,
+                              backgroundColor: isSelected
+                                  ? Colors.brown.withOpacity(0.1)
+                                  : null,
+                            ),
+                            recognizer: LongPressGestureRecognizer()
+                              ..onLongPressStart = (details) =>
+                                  _onAyaLongPress(ayaNumber, details),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
+                  if (selectedAyaIndex != null && buttonPosition != null)
+                    Positioned(
+                      top: buttonPosition!.dy - 60,
+                      left: buttonPosition!.dx - 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.brown[700],
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _navigateToTafsir,
+                        child: Text('التفسير'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 }
 
 class TafsirScreen extends StatelessWidget {
   final String surahName;
-  final int ayaIndex;
+  final int ayaNumber;
   final String tafsirText;
   final String ayaText;
 
   TafsirScreen({
     required this.surahName,
-    required this.ayaIndex,
+    required this.ayaNumber,
     required this.tafsirText,
     required this.ayaText,
   });
@@ -260,15 +317,13 @@ class TafsirScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFDF6E3),
       appBar: AppBar(
         title: Text(
-          'تفسير الآية $ayaIndex من $surahName',
+          'تفسير الآية $ayaNumber من $surahName',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontFamily: 'HafsSmart_08',
           ),
         ),
         backgroundColor: Colors.brown[800],
@@ -290,12 +345,11 @@ class TafsirScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    'الآية $ayaIndex',
+                    'الآية $ayaNumber',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.brown[800],
-                      fontFamily: 'HafsSmart_08',
                     ),
                   ),
                   SizedBox(height: 12),
@@ -304,7 +358,6 @@ class TafsirScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       color: Colors.black87,
-                      fontFamily: 'HafsSmart_08',
                       height: 1.8,
                     ),
                     textAlign: TextAlign.center,
@@ -332,12 +385,21 @@ class TafsirScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    'التفسير',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown[800],
+                    ),
+                    textDirection: TextDirection.rtl,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
                     cleanTafsirText(tafsirText),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.black87,
                       height: 1.6,
-                      fontFamily: 'HafsSmart_08',
                     ),
                     textAlign: TextAlign.justify,
                     textDirection: TextDirection.rtl,
