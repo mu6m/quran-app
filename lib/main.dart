@@ -4,27 +4,31 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 void main() {
-  runApp(QuranApp());
+  runApp(const QuranApp());
 }
 
 class QuranApp extends StatelessWidget {
+  const QuranApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'القرآن الكريم',
       theme: ThemeData(
         primarySwatch: Colors.brown,
-        scaffoldBackgroundColor: Color(0xFFFDF6E3),
+        scaffoldBackgroundColor: const Color(0xFFFDF6E3),
       ),
-      home: SurahMenuScreen(),
+      home: const SurahMenuScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class SurahMenuScreen extends StatefulWidget {
+  const SurahMenuScreen({super.key});
+
   @override
-  _SurahMenuScreenState createState() => _SurahMenuScreenState();
+  State<SurahMenuScreen> createState() => _SurahMenuScreenState();
 }
 
 class _SurahMenuScreenState extends State<SurahMenuScreen> {
@@ -62,7 +66,7 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'القرآن الكريم',
           style: TextStyle(
             fontSize: 22,
@@ -87,7 +91,8 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
                 return Card(
                   color: Colors.white,
                   elevation: 2,
-                  margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                   child: ListTile(
                     onTap: () {
                       Navigator.push(
@@ -125,12 +130,12 @@ class _SurahMenuScreenState extends State<SurahMenuScreen> {
 }
 
 class SurahReadScreen extends StatefulWidget {
+  const SurahReadScreen({super.key, required this.surah});
+
   final Map<String, dynamic> surah;
 
-  SurahReadScreen({required this.surah});
-
   @override
-  _SurahReadScreenState createState() => _SurahReadScreenState();
+  State<SurahReadScreen> createState() => _SurahReadScreenState();
 }
 
 class _SurahReadScreenState extends State<SurahReadScreen> {
@@ -219,7 +224,7 @@ class _SurahReadScreenState extends State<SurahReadScreen> {
       appBar: AppBar(
         title: Text(
           widget.surah['name']['ar'],
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -245,7 +250,7 @@ class _SurahReadScreenState extends State<SurahReadScreen> {
                       textAlign: TextAlign.justify,
                       textDirection: TextDirection.rtl,
                       text: TextSpan(
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 24,
                           color: Colors.black87,
                           height: 1.8,
@@ -260,9 +265,7 @@ class _SurahReadScreenState extends State<SurahReadScreen> {
                             text: '$ayaText ﴿$ayaNumber﴾ ',
                             style: TextStyle(
                               color: isSelected ? Colors.brown : Colors.black87,
-                              backgroundColor: isSelected
-                                  ? Colors.brown.withOpacity(0.1)
-                                  : null,
+                              backgroundColor: isSelected ? Colors.brown : null,
                             ),
                             recognizer: LongPressGestureRecognizer()
                               ..onLongPressStart = (details) =>
@@ -282,7 +285,7 @@ class _SurahReadScreenState extends State<SurahReadScreen> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _navigateToTafsir,
-                        child: Text('التفسير'),
+                        child: const Text('التفسير'),
                       ),
                     ),
                 ],
@@ -293,17 +296,18 @@ class _SurahReadScreenState extends State<SurahReadScreen> {
 }
 
 class TafsirScreen extends StatelessWidget {
-  final String surahName;
-  final int ayaNumber;
-  final String tafsirText;
-  final String ayaText;
-
-  TafsirScreen({
+  const TafsirScreen({
+    super.key,
     required this.surahName,
     required this.ayaNumber,
     required this.tafsirText,
     required this.ayaText,
   });
+
+  final String surahName;
+  final int ayaNumber;
+  final String tafsirText;
+  final String ayaText;
 
   String cleanTafsirText(String text) {
     return text
@@ -320,7 +324,7 @@ class TafsirScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'تفسير الآية $ayaNumber من $surahName',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -331,12 +335,12 @@ class TafsirScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.brown[50],
                 borderRadius: BorderRadius.circular(12),
@@ -352,10 +356,10 @@ class TafsirScreen extends StatelessWidget {
                       color: Colors.brown[800],
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     ayaText,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 22,
                       color: Colors.black87,
                       height: 1.8,
@@ -366,15 +370,15 @@ class TafsirScreen extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey,
                     spreadRadius: 1,
                     blurRadius: 3,
                     offset: Offset(0, 1),
@@ -393,10 +397,10 @@ class TafsirScreen extends StatelessWidget {
                     ),
                     textDirection: TextDirection.rtl,
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     cleanTafsirText(tafsirText),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       color: Colors.black87,
                       height: 1.6,
