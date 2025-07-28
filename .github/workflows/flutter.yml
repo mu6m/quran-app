@@ -7,7 +7,7 @@ on:
     branches:
       - master
 
-on: push    # Default will running for every branch.
+# on: push    # Default will running for every branch.
 
 jobs:
   build:
